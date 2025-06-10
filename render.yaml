@@ -1,0 +1,18 @@
+services:
+  # Konfigurasi untuk backend FastAPI Anda
+  - type: web
+    name: signbridge-backend
+    env: python
+    # Menentukan direktori tempat kode backend berada
+    rootDir: backend
+    # Perintah untuk menginstal dependency dari requirements.txt
+    # Menambahkan upgrade pip adalah praktik yang baik
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    # Perintah untuk menjalankan server di production
+    # --host 0.0.0.0 agar bisa diakses dari luar, $PORT diisi otomatis oleh Render
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    # Menggunakan paket gratis
+    plan: free
+    # Pengaturan untuk paket gratis
+    healthCheckPath: /
+    autoSuspend: true

@@ -1,0 +1,15 @@
+# Virtual Environment
+venv/
+/venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE files & OS files
+.vscode/
+.idea/
+.DS_Store
+
+# File Environment (berisi API key)
+.env
