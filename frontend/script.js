@@ -21,8 +21,8 @@ const captureCtx = captureCanvas.getContext('2d');
 
 // --- Konfigurasi URL Backend ---
 const BACKEND_DOMAIN = "1673-36-73-70-35.ngrok-free.app "; // Ganti saat deploy
-const WEBSOCKET_URL = `ws://${BACKEND_DOMAIN}/ws`;
-const TRANSCRIBE_URL = `http://${BACKEND_DOMAIN}/transcribe`;
+const WEBSOCKET_URL = `wss://${BACKEND_DOMAIN}/ws`;
+const TRANSCRIBE_URL = `https://${BACKEND_DOMAIN}/transcribe`;
 
 // Variabel untuk perekaman audio
 let mediaRecorder;
