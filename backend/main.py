@@ -129,5 +129,8 @@ async def websocket_endpoint(websocket: WebSocket, mode: str):
                         prediction_result["prediction"] = active_class_names[idx]
                         prediction_result["confidence"] = round(confidence, 2)
                 await websocket.send_json(prediction_result)
-        except WebSocketDisconnect: print("Koneksi WebSocket ditutup.")
-        except Exception as e: await websocket.close()
+        except WebSocketDisconnect:
+            print("Koneksi WebSocket ditutup.")
+        except Exception as e:
+            await websocket.close()
+            print(f"Error dalam deteksi: {e}")
