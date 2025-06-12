@@ -1,6 +1,5 @@
-// frontend/script.js (Final Lengkap)
+// frontend/script.js (Final Lengkap dengan STT dan Deteksi Isyarat)
 
-// --- Deklarasi Elemen DOM ---
 const video = document.getElementById('webcam');
 const messageBox = document.getElementById('message-box');
 const detectBtn = document.getElementById('detect-btn');
@@ -17,7 +16,11 @@ const dictionary = ['halo', 'apa', 'kabar', 'terima', 'kasih', 'selamat', 'datan
 let socket = null;
 let isDetecting = false;
 let signDetectionInterval;
-const BASE_BACKEND_URL = "ws://localhost:8001/ws";
+
+// !! PENTING: Ganti dengan URL backend Anda saat deploy !!
+const BACKEND_DOMAIN = "https://1673-36-73-70-35.ngrok-free.app"; // Contoh
+const WEBSOCKET_URL = `wss://${BACKEND_DOMAIN}/ws`;
+const TRANScribe_URL = `https://${BACKEND_DOMAIN}/transcribe`;
 
 let mediaRecorder;
 let audioChunks = [];
@@ -36,16 +39,14 @@ async function setupCamera() {
             captureCanvas.width = video.videoWidth;
             captureCanvas.height = video.videoHeight;
         });
-    } catch (err) {
-        alert('Akses webcam error: ' + err.message);
-    }
+    } catch (err) { alert('Akses webcam error: ' + err.message); }
 }
 
 // --- Fungsi Deteksi Bahasa Isyarat ---
 function sendFrameForSignDetection() {
     if (socket && socket.readyState === WebSocket.OPEN && isDetecting) {
         captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-        const frameData = captureCanvas.toDataURL('image/jpeg', 0.8);
+        const frameData = captureCtx.canvas.toDataURL('image/jpeg', 0.8);
         socket.send(frameData);
     }
 }
@@ -57,7 +58,7 @@ function showDetectedWord(word) {
 function toggleDetection() {
     if (!isDetecting) {
         const selectedModel = modelSelect.value;
-        const backendUrlWithMode = `${BASE_BACKEND_URL}/${selectedModel}`;
+        const backendUrlWithMode = `${WEBSOCKET_URL}/${selectedModel}`;
         console.log(`Menghubungkan ke: ${backendUrlWithMode}`);
         socket = new WebSocket(backendUrlWithMode);
 
@@ -72,11 +73,7 @@ function toggleDetection() {
 
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            if (data.error) {
-                alert(`Error dari server: ${data.error}`);
-                toggleDetection();
-                return;
-            }
+            if (data.error) { alert(`Error dari server: ${data.error}`); toggleDetection(); return; }
             showDetectedWord(data.prediction);
             if (data.prediction && data.prediction !== "-" && data.prediction !== lastPrediction) {
                 if (messageBox.value.slice(-1) !== " " && messageBox.value.length > 0) {
@@ -86,10 +83,7 @@ function toggleDetection() {
                 }
                 lastPrediction = data.prediction;
                 setTimeout(() => {
-                    if (lastPrediction !== "-") {
-                        messageBox.value += " ";
-                        lastPrediction = "-";
-                    }
+                    if (lastPrediction !== "-") { messageBox.value += " "; lastPrediction = "-"; }
                 }, 500);
             } else if (data.prediction === "-") {
                 lastPrediction = "-";
@@ -105,10 +99,7 @@ function toggleDetection() {
 
 function stopDetection() {
     isDetecting = false;
-    if (socket) {
-        socket.close();
-        socket = null;
-    }
+    if (socket) { socket.close(); socket = null; }
     clearInterval(signDetectionInterval);
     detectBtn.textContent = 'Mulai Deteksi';
     modelSelect.disabled = false;
@@ -123,7 +114,7 @@ async function sendAudioToServer(audioBlob) {
     recordBtn.textContent = 'Memproses...';
     recordBtn.disabled = true;
     try {
-        const response = await fetch("http://localhost:8001/transcribe", { method: 'POST', body: formData });
+        const response = await fetch(TRANScribe_URL, { method: 'POST', body: formData });
         if (response.ok) {
             const result = await response.json();
             if (result.transcription) {
@@ -152,6 +143,7 @@ speakBtn.addEventListener('click', () => {
     if (!text) { alert('Tidak ada pesan untuk diucapkan'); return; }
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'id-ID';
+    if(speechSynthesis.speaking) speechSynthesis.cancel();
     speechSynthesis.speak(utterance);
 });
 
@@ -180,6 +172,7 @@ recordBtn.addEventListener('click', async () => {
     }
 });
 
+// ... (Kode untuk suggestion box tidak diubah) ...
 messageBox.addEventListener('input', () => {
     const words = messageBox.value.trim().split(' ');
     const last = words[words.length - 1].toLowerCase();
@@ -187,7 +180,6 @@ messageBox.addEventListener('input', () => {
     const filtered = dictionary.filter(w => w.startsWith(last) && w !== last);
     showSuggestions(filtered);
 });
-
 function showSuggestions(words) {
     suggestedArea.innerHTML = '';
     words.forEach(word => {

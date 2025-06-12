@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import base64
 import json
 from transformers import pipeline
+import torch
 
 # --- Inisialisasi Aplikasi ---
 app = FastAPI()
@@ -24,26 +25,24 @@ SIBI_CLASS_NAMES_PATH = os.path.join('data_sibi', 'class_names.txt')
 BISINDO_MODEL_PATH = os.path.join('models_bisindo', 'final_hybrid_sign_language_model_augmented_bisindo.h5') 
 BISINDO_CLASS_NAMES_PATH = os.path.join('data_bisindo', 'class_names.txt')
 
-IMAGE_HEIGHT, IMAGE_WIDTH, NUM_LANDMARK_FEATURES = 224, 224, 42
+IMAGE_HEIGHT, IMAGE_WIDTH = 224, 224
 
 # --- Pemuatan Model ---
 def load_tf_model(path, type_name):
     try:
-        model = tf.keras.models.load_model(path)
+        model = tf.keras.models.load_model(path, compile=False)
         print(f"Model {type_name} berhasil dimuat.")
         return model
     except Exception as e:
-        print(f"ERROR saat memuat model {type_name}: {e}")
+        print(f"ERROR memuat model {type_name}: {e}")
         return None
 
 def load_class_names(path, type_name):
     try:
         with open(path, 'r') as f:
-            class_names = [line.strip() for line in f.readlines()]
-        print(f"Nama kelas {type_name} berhasil dimuat.")
-        return class_names
+            return [line.strip() for line in f.readlines()]
     except Exception as e:
-        print(f"ERROR saat memuat nama kelas {type_name}: {e}")
+        print(f"ERROR memuat nama kelas {type_name}: {e}")
         return []
 
 sibi_model = load_tf_model(SIBI_MODEL_PATH, "SIBI")
@@ -51,16 +50,21 @@ sibi_class_names = load_class_names(SIBI_CLASS_NAMES_PATH, "SIBI")
 bisindo_model = load_tf_model(BISINDO_MODEL_PATH, "BISINDO")
 bisindo_class_names = load_class_names(BISINDO_CLASS_NAMES_PATH, "BISINDO")
 
+# --- Muat model STT WHISPER-MEDIUM ---
 stt_pipeline = None
 try:
-    print("Memuat pipeline Whisper (STT) dari Hugging Face...")
-    # --- MENGGUNAKAN MODEL 'whisper-base' YANG LEBIH RINGAN ---
-    stt_pipeline = pipeline("automatic-speech-recognition", model="openai/whisper-base")
-    print("Pipeline Whisper (STT) 'base' berhasil dimuat.")
+    print("Memuat pipeline Whisper 'medium' (STT)... Ini akan mengunduh >1.5GB saat pertama kali.")
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    stt_pipeline = pipeline(
+        "automatic-speech-recognition",
+        model="openai/whisper-medium",
+        device=device
+    )
+    print(f"Pipeline Whisper (STT) 'medium' berhasil dimuat di perangkat {device}.")
 except Exception as e:
     print(f"Gagal memuat pipeline Whisper: {e}")
 
-# --- Inisialisasi MediaPipe ---
+# Inisialisasi MediaPipe
 mp_hands = mp.solutions.hands
 
 # --- Fungsi Helper ---
@@ -73,13 +77,11 @@ def process_frame_for_hybrid_model(img_bgr, hands_detector):
     results = hands_detector.process(image_rgb)
     if not results.multi_hand_landmarks: return None, None
     hand_landmarks = results.multi_hand_landmarks[0]
-    landmarks_list = []
-    for lm in hand_landmarks.landmark: landmarks_list.extend([lm.x, lm.y])
-    base_x, base_y = landmarks_list[0], landmarks_list[1]
-    normalized_landmarks = []
-    for i in range(0, len(landmarks_list), 2):
-        normalized_landmarks.append(landmarks_list[i] - base_x)
-        normalized_landmarks.append(landmarks_list[i+1] - base_y)
+    landmarks_list = [lm.x for lm in hand_landmarks.landmark] + [lm.y for lm in hand_landmarks.landmark]
+    interleaved = []
+    for i in range(21): interleaved.extend([landmarks_list[i], landmarks_list[i+21]])
+    base_x, base_y = interleaved[0], interleaved[1]
+    normalized_landmarks = [val - (base_x if i % 2 == 0 else base_y) for i, val in enumerate(interleaved)]
     max_val = np.max(np.abs(normalized_landmarks));
     if max_val == 0: max_val = 1e-6
     scaled_landmarks = np.array(normalized_landmarks) / max_val
@@ -89,7 +91,7 @@ def process_frame_for_hybrid_model(img_bgr, hands_detector):
     img_input = np.expand_dims(img_normalized, axis=0)
     return img_input, landmark_input
 
-# --- ENDPOINT HTTP UNTUK TRANSKRIPSI AUDIO ---
+# --- Endpoint Transkripsi Audio ---
 @app.post("/transcribe")
 async def transcribe_audio(audio_file: UploadFile = File(...)):
     if not stt_pipeline:
@@ -97,24 +99,20 @@ async def transcribe_audio(audio_file: UploadFile = File(...)):
     try:
         content = await audio_file.read()
         result = stt_pipeline(content, generate_kwargs={"language": "indonesian"})
-        transcribed_text = result.get("text", "")
+        transcribed_text = result.get("text", "").strip()
         print(f"Hasil Transkripsi: {transcribed_text}")
         return {"transcription": transcribed_text}
     except Exception as e:
         print(f"Error saat transkripsi: {e}")
         return {"error": "Gagal melakukan transkripsi."}
 
-
-# --- ENDPOINT WEBSOCKET UNTUK DETEKSI BAHASA ISYARAT ---
+# --- Endpoint WebSocket Deteksi Isyarat ---
 @app.websocket("/ws/{mode}")
 async def websocket_endpoint(websocket: WebSocket, mode: str):
     await websocket.accept()
-    print(f"Koneksi WebSocket diterima untuk mode: {mode}")
     active_model, active_class_names = (sibi_model, sibi_class_names) if mode == 'sibi' else (bisindo_model, bisindo_class_names)
     if not active_model or not active_class_names:
-        await websocket.send_json({"error": f"Model untuk mode '{mode}' tidak siap di server."})
-        await websocket.close()
-        return
+        await websocket.close(); return
     with mp_hands.Hands(static_image_mode=True, max_num_hands=1, min_detection_confidence=0.5) as hands_detector:
         try:
             while True:
@@ -134,6 +132,4 @@ async def websocket_endpoint(websocket: WebSocket, mode: str):
                         prediction_result["confidence"] = round(confidence, 2)
                 await websocket.send_json(prediction_result)
         except WebSocketDisconnect: print("Koneksi WebSocket ditutup.")
-        except Exception as e:
-            print(f"Terjadi error pada koneksi WebSocket: {e}")
-            await websocket.close()
+        except Exception as e: await websocket.close()
