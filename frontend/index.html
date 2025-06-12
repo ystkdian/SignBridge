@@ -14,6 +14,7 @@
         <div class="video-form-container">
             <div id="video-container">
                 <video id="webcam" autoplay muted playsinline></video>
+                <div id="detected-word-display"></div>
             </div>
 
             <div id="field-container">
@@ -25,13 +26,20 @@
                     </select>
                 </div>
                 <div>
-                    <label for="message-box">Pesan:</label>
-                    <textarea id="message-box" rows="4" placeholder="Hasil deteksi isyarat atau suara akan muncul di sini..."></textarea>
+                    <label for="message-box">Pesan (dari Deteksi Isyarat):</label>
+                    <textarea id="message-box" rows="3" placeholder="Hasil deteksi isyarat akan muncul di sini..." readonly></textarea>
                 </div>
+                
                 <div>
-                    <label for="suggested-area">Saran Kata:</label>
+                    <label for="stt-box">Hasil Transkripsi Suara:</label>
+                    <textarea id="stt-box" rows="2" placeholder="Hasil rekaman suara akan muncul di sini..."></textarea>
+                </div>
+
+                <div>
+                    <label for="suggested-area">Saran Kata (dari Deteksi Isyarat):</label>
                     <div id="suggested-area" class="suggested-area" aria-label="Saran kata akan muncul di sini..."></div>
-                </div>        
+                </div>
+                        
                 <div class="button-group">
                     <button id="detect-btn" title="Mulai mendeteksi isyarat">
                         <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M17 10.5V7c0-1.1-.9-2-2-2H3C1.9 5 1 5.9 1 7v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-3.5l4 4v-11l-4 4z"/></svg>
