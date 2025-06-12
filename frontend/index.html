@@ -14,7 +14,6 @@
         <div class="video-form-container">
             <div id="video-container">
                 <video id="webcam" autoplay muted playsinline></video>
-                <div id="detected-word-display"></div>
             </div>
 
             <div id="field-container">
@@ -26,26 +25,23 @@
                     </select>
                 </div>
                 <div>
-                    <label for="message-box">Pesan (dari Deteksi Isyarat):</label>
-                    <textarea id="message-box" rows="3" placeholder="Hasil deteksi isyarat akan muncul di sini..." readonly></textarea>
+                    <label for="message-box">Pesan (Hasil Deteksi):</label>
+                    <textarea id="message-box" rows="3" placeholder="Hasil deteksi isyarat akan muncul di sini..."></textarea>
                 </div>
-                
                 <div>
                     <label for="stt-box">Hasil Transkripsi Suara:</label>
                     <textarea id="stt-box" rows="2" placeholder="Hasil rekaman suara akan muncul di sini..."></textarea>
                 </div>
-
                 <div>
-                    <label for="suggested-area">Saran Kata (dari Deteksi Isyarat):</label>
+                    <label for="suggested-area">Saran Kata:</label>
                     <div id="suggested-area" class="suggested-area" aria-label="Saran kata akan muncul di sini..."></div>
-                </div>
-                        
+                </div>        
                 <div class="button-group">
-                    <button id="detect-btn" title="Mulai mendeteksi isyarat">
+                    <button id="detect-btn" title="Mulai mendeteksi">
                         <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M17 10.5V7c0-1.1-.9-2-2-2H3C1.9 5 1 5.9 1 7v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-3.5l4 4v-11l-4 4z"/></svg>
                         Mulai Deteksi
                     </button>
-                    <button id="record-btn" title="Rekam suara untuk diubah jadi teks">
+                    <button id="record-btn" title="Rekam suara">
                         <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.49 6-3.31 6-6.72h-1.7z"/></svg>
                         Rekam Suara
                     </button>

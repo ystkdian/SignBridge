@@ -1,4 +1,4 @@
-// frontend/script.js (Final dengan Perbaikan Koneksi dan Logika)
+// frontend/script.js (Final dengan semua perbaikan)
 
 // --- Deklarasi Elemen DOM ---
 const video = document.getElementById('webcam');
@@ -7,10 +7,8 @@ const sttBox = document.getElementById('stt-box');
 const detectBtn = document.getElementById('detect-btn');
 const clearBtn = document.getElementById('clear-btn');
 const suggestedArea = document.getElementById('suggested-area');
-const recordBtn = document.getElementById('record-btn');
 const modelSelect = document.getElementById('model-select');
-const detectedWordDisplay = document.getElementById('detected-word-display');
-
+const recordBtn = document.getElementById('record-btn');
 
 // --- Kamus dan State Aplikasi ---
 let dictionary = [];
@@ -21,31 +19,28 @@ let lastPrediction = "-";
 const captureCanvas = document.createElement('canvas');
 const captureCtx = captureCanvas.getContext('2d');
 
-// --- Konfigurasi URL Backend (DIPERBAIKI) ---
-const BACKEND_DOMAIN = "1673-36-73-70-35.ngrok-free.app"; // URL Ngrok Anda
-const WEBSOCKET_URL = `wss://${BACKEND_DOMAIN}/ws`;       // Protokol aman: wss://
-const TRANSCRIBE_URL = `https://${BACKEND_DOMAIN}/transcribe`; // Protokol aman: https://
-
+// --- Konfigurasi URL Backend ---
+const BACKEND_DOMAIN = "1673-36-73-70-35.ngrok-free.app "; // Ganti saat deploy
+const WEBSOCKET_URL = `ws://${BACKEND_DOMAIN}/ws`;
+const TRANSCRIBE_URL = `http://${BACKEND_DOMAIN}/transcribe`;
 
 // Variabel untuk perekaman audio
 let mediaRecorder;
 let audioChunks = [];
 let isRecording = false;
 
-// --- Fungsi untuk Memuat Kamus ---
+// --- Fungsi-fungsi ---
 async function loadDictionary() {
     try {
-        const response = await fetch('dictionary.json');
+        const response = await fetch('kamus.json');
         if (!response.ok) throw new Error('Gagal memuat kamus');
         dictionary = await response.json();
-        console.log(`Kamus berhasil dimuat.`);
     } catch (error) {
         console.error("Error memuat kamus:", error);
         dictionary = ['HALO', 'APA', 'KABAR'];
     }
 }
 
-// --- Fungsi Inisialisasi Kamera ---
 async function setupCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -57,7 +52,6 @@ async function setupCamera() {
     } catch (err) { alert('Akses webcam error: ' + err.message); }
 }
 
-// --- Fungsi Logika Inti ---
 function sendFrameForSignDetection() {
     if (!isDetecting || !socket || socket.readyState !== WebSocket.OPEN) return;
     captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
@@ -65,16 +59,12 @@ function sendFrameForSignDetection() {
     socket.send(frameData);
 }
 
-function showDetectedWord(word) {
-    if (detectedWordDisplay) detectedWordDisplay.textContent = word;
-}
-
 function findSuggestions(currentWord) {
     if (!currentWord || currentWord.length < 2) return [];
     const lowerCaseWord = currentWord.toLowerCase();
-    return dictionary.filter(dictWord =>
-        dictWord.toLowerCase().startsWith(lowerCaseWord) &&
-        dictWord.length > 1 &&
+    return dictionary.filter(dictWord => 
+        dictWord.toLowerCase().startsWith(lowerCaseWord) && 
+        dictWord.length > 1 && 
         dictWord.toLowerCase() !== lowerCaseWord
     ).slice(0, 10);
 }
@@ -96,13 +86,18 @@ function showSuggestions(words, currentWord) {
     });
 }
 
+function updateSuggestionsFromMessageBox() {
+    const words = messageBox.value.trim().split(' ');
+    const currentWord = words[words.length - 1];
+    const suggestions = findSuggestions(currentWord);
+    showSuggestions(suggestions, currentWord);
+}
+
 function toggleDetection() {
     if (!isDetecting) {
         const selectedModel = modelSelect.value;
         const backendUrlWithMode = `${WEBSOCKET_URL}/${selectedModel}`;
-        console.log(`Menghubungkan ke: ${backendUrlWithMode}`);
         socket = new WebSocket(backendUrlWithMode);
-
         socket.onopen = () => {
             isDetecting = true;
             lastPrediction = "-";
@@ -111,18 +106,15 @@ function toggleDetection() {
             modelSelect.disabled = true;
             signDetectionInterval = setInterval(sendFrameForSignDetection, 1000);
         };
-
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.error) { alert(`Error: ${data.error}`); stopDetection(); return; }
-            showDetectedWord(data.prediction);
             if (data.prediction && data.prediction !== "-" && data.prediction !== lastPrediction) {
                 lastPrediction = data.prediction;
                 messageBox.value += data.prediction + " ";
-                messageBox.dispatchEvent(new Event('input'));
+                updateSuggestionsFromMessageBox();
             }
         };
-
         socket.onclose = () => stopDetection();
         socket.onerror = () => { alert("Gagal terhubung ke server deteksi."); stopDetection(); };
     } else {
@@ -137,7 +129,6 @@ function stopDetection() {
     detectBtn.textContent = 'Mulai Deteksi';
     detectBtn.classList.remove('active-btn');
     modelSelect.disabled = false;
-    showDetectedWord('');
 }
 
 async function sendAudioToServer(audioBlob) {
@@ -169,14 +160,13 @@ async function sendAudioToServer(audioBlob) {
 
 // --- Event Listeners ---
 detectBtn.addEventListener('click', toggleDetection);
-
 clearBtn.addEventListener('click', () => {
     messageBox.value = '';
     sttBox.value = '';
     suggestedArea.innerHTML = '';
     lastPrediction = "-";
 });
-
+messageBox.addEventListener('input', updateSuggestionsFromMessageBox);
 recordBtn.addEventListener('click', async () => {
     if (!isRecording) {
         try {
@@ -200,13 +190,6 @@ recordBtn.addEventListener('click', async () => {
         mediaRecorder.stop();
         isRecording = false;
     }
-});
-
-messageBox.addEventListener('input', () => {
-    const words = messageBox.value.trim().split(' ');
-    const currentWord = words[words.length - 1];
-    const suggestions = findSuggestions(currentWord);
-    showSuggestions(suggestions, currentWord);
 });
 
 // --- Jalankan Aplikasi ---
