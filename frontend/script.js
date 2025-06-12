@@ -30,6 +30,21 @@ const captureCtx = captureCanvas.getContext('2d');
 let lastPrediction = "-";
 let isCooldown = false;
 
+async function loadDictionary() {
+    try {
+        const response = await fetch('dictionary.json'); // Meminta file kamus.json
+        if (!response.ok) {
+            throw new Error('Gagal memuat kamus: ' + response.statusText);
+        }
+        dictionary = await response.json(); // Membaca dan mengubah JSON menjadi array
+        console.log(`Kamus berhasil dimuat dengan ${dictionary.length} kata.`);
+    } catch (error) {
+        console.error(error);
+        // Fallback jika file JSON gagal dimuat
+        dictionary = ['halo', 'apa', 'kabar', 'maaf', 'gagal', 'memuat', 'kamus'];
+    }
+}
+
 // --- Fungsi Inisialisasi ---
 async function setupCamera() {
     try {
@@ -58,6 +73,42 @@ function sendFrameForSignDetection() {
 
 function showDetectedWord(word) {
     detectedWordDisplay.textContent = word;
+}
+
+function findSuggestions(letters) {
+    const lowerCaseLetters = letters.map(l => l.toLowerCase());
+    const suggestions = dictionary.filter(word => {
+        if (word.length < lowerCaseLetters.length) return false;
+        const lowerCaseWord = word.toLowerCase();
+        return lowerCaseLetters.every(letter => lowerCaseWord.includes(letter));
+    });
+    return suggestions.slice(0, 10);
+}
+
+function showSuggestions(words) {
+    suggestedArea.innerHTML = '';
+    if (words.length === 0) {
+        suggestedArea.setAttribute('aria-label', `Tidak ada saran untuk "${letterBuffer.join('')}"`);
+        return;
+    }
+    suggestedArea.removeAttribute('aria-label');
+    words.forEach(word => {
+        const span = document.createElement('span');
+        span.textContent = word;
+        span.classList.add('suggested-word');
+        span.onclick = () => {
+            if (messageBox.value.slice(-1) !== " " && messageBox.value.length > 0) {
+                messageBox.value += " " + word + " ";
+            } else {
+                messageBox.value += word + " ";
+            }
+            messageBox.focus();
+            letterBuffer = [];
+            suggestedArea.innerHTML = '';
+            suggestedArea.setAttribute('aria-label', 'Saran kata muncul di sini...');
+        };
+        suggestedArea.appendChild(span);
+    });
 }
 
 function toggleDetection() {
@@ -209,3 +260,4 @@ function showSuggestions(words) {
 
 // --- Jalankan Aplikasi ---
 setupCamera();
+loadDictionary(); // <--- PANGGIL FUNGSI BARU UNTUK MEMUAT KAMUS
