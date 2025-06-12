@@ -126,6 +126,7 @@ function toggleDetection() {
                 const lastDetectedWord = processedPrediction.toLowerCase(); // Gunakan kata yang telah diproses untuk saran
                 if (lastDetectedWord.length >= 3) {
                     const suggestions = getSuggestions(lastDetectedWord);
+                    console.log("Suggestions:", suggestions); // Debug log
                     showSuggestions(suggestions);
                 }
             }
@@ -151,8 +152,23 @@ function stopDetection() {
 
 // --- Fungsi untuk mendapatkan Saran Kata ---
 function getSuggestions(detectedWord) {
+    // Buat frekuensi karakter untuk detectedWord
+    const charCount = {};
+    for (const char of detectedWord) {
+        charCount[char] = (charCount[char] || 0) + 1; // Hitung kemunculan huruf
+    }
+
+    // Filter kata dalam dictionary berdasarkan frekuensi karakter
     return dictionary.filter(word => {
-        return word.toLowerCase().includes(detectedWord);
+        const tempCharCount = { ...charCount }; // Salin objek frekuensi
+        for (const char of word) {
+            if (tempCharCount[char] > 0) {
+                tempCharCount[char]--; // Kurangi jumlah kemunculan jika ada
+            } else {
+                return false; // Jika karakter tidak dapat ditemukan, kembalikan false
+            }
+        }
+        return true; // Jika semua karakter kecukupan, kembalikan true
     });
 }
 
