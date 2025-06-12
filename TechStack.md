@@ -5,7 +5,7 @@
 | Teknologi               | Deskripsi / Peran dalam Proyek |
 |-------------------------|--------------------------------|
 | HTML5                   | Membangun struktur dan elemen-elemen halaman web. |
-| CSS3                    | Memberikan gaya, warna, dan tata letak pada antarmuka pengguna. |
+| CSS3                    | Memberikan style, warna, dan tata letak pada antarmuka pengguna. |
 | JavaScript (ES6+)       | Mengatur semua logika interaktif, komunikasi dengan backend, dan manipulasi halaman. |
 | WebSocket API           | Membangun koneksi dua arah ke backend untuk deteksi isyarat secara real-time. |
 | WebRTC API              | Digunakan untuk mengakses kamera secara real time |
@@ -26,8 +26,7 @@
 | Teknologi               | Deskripsi / Peran dalam Proyek |
 |-------------------------|--------------------------------|
 | Git & GitHub            | Untuk kontrol versi kode dan sebagai pusat repositori online. |
-| Render                  | Platform as a Service (PaaS) yang digunakan untuk men-deploy backend FastAPI. |
-| Netlify / GitHub Pages  | Platform yang digunakan untuk men-deploy frontend statis (HTML, CSS, JS). |
+| Netlify                 | Platform yang digunakan untuk men-deploy frontend statis (HTML, CSS, JS). |
 | Ngrok                   | Alat bantu (tunneling) untuk membuat server lokal bisa diakses dari internet untuk tujuan demo. |
 | Chocolatey              | Package manager di Windows yang digunakan untuk menginstal FFmpeg. |
 | FFmpeg                  | System-level tool yang dibutuhkan oleh library audio di backend. |
