@@ -11,17 +11,16 @@ const detectedWordDisplay = document.getElementById('detected-word-display');
 const modelSelect = document.getElementById('model-select');
 const recordBtn = document.getElementById('record-btn');
 
-const dictionary = ['halo', 'apa', 'kabar', 'terima', 'kasih', 'selamat', 'datang', 'sampai', 'jumpa', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
-
 // --- Konfigurasi dan State Aplikasi ---
 let socket = null;
 let isDetecting = false;
 let signDetectionInterval;
+let dictionary = []; // Opsi untuk dictionary yang dimuat dari JSON
 
 // Atur URL ini sesuai dengan lingkungan Anda (lokal atau deploy)
-const BACKEND_DOMAIN = "localhost:8001";
-const WEBSOCKET_URL = `ws://${BACKEND_DOMAIN}/ws`;
-const TRANSCRIBE_URL = `http://${BACKEND_DOMAIN}/transcribe`;
+const BACKEND_DOMAIN = "d805-2001-448a-4042-8c89-2014-c34d-827b-adb1.ngrok-free.app";
+const WEBSOCKET_URL = `wss://${BACKEND_DOMAIN}/ws`;
+const TRANSCRIBE_URL = `https://${BACKEND_DOMAIN}/transcribe`;
 
 let mediaRecorder;
 let audioChunks = [];
@@ -34,6 +33,17 @@ let lastPrediction = "-";
 // BARU: Variabel untuk mengontrol jeda/cooldown
 let isCooldown = false;
 
+// --- Fungsi untuk Memuat Dictionary ---
+async function loadDictionary() {
+    try {
+        const response = await fetch('dictionary.json');
+        const json = await response.json();
+        dictionary = Object.values(json); // Ambil semua nilai dari JSON sebagai dictionary
+        console.log("Dictionary loaded", dictionary); // Untuk debug
+    } catch (error) {
+        console.error("Error loading dictionary:", error);
+    }
+}
 
 // --- Fungsi Inisialisasi ---
 async function setupCamera() {
@@ -109,6 +119,13 @@ function toggleDetection() {
                     showDetectedWord("-"); // Hapus prediksi dari layar
                     console.log("Jeda selesai. Siap mendeteksi lagi.");
                 }, 3000); // 3000 milidetik = 3 detik
+
+                // --- Tambahan: Menampilkan Saran Kata ---
+                const lastDetectedWord = messageBox.value.trim().split(' ').slice(-1)[0].toLowerCase();
+                if (lastDetectedWord.length >= 3) {
+                    const suggestions = getSuggestions(lastDetectedWord);
+                    showSuggestions(suggestions);
+                }
             }
         };
 
@@ -130,7 +147,31 @@ function stopDetection() {
     showDetectedWord('');
 }
 
-// ... (Sisa kode untuk STT, Text-to-Speech, dan Saran Kata tidak berubah) ...
+// --- Fungsi untuk mendapatkan Saran Kata ---
+function getSuggestions(detectedWord) {
+    const filtered = dictionary.filter(word => {
+        const wordLower = word.toLowerCase();
+        return detectedWord.split('').some(letter => wordLower.includes(letter));
+    });
+    return filtered;
+}
+
+// --- Fungsi untuk Menampilkan Saran ---
+function showSuggestions(words) {
+    suggestedArea.innerHTML = ''; // Clear existing suggestions
+    words.forEach(word => {
+        const span = document.createElement('span'); // Create a span for each suggestion
+        span.textContent = word; // Set the word text
+        span.classList.add('suggested-word');  // Add a class for styling
+        span.onclick = () => {
+            // Append the clicked suggestion to the message box
+            messageBox.value += word + ' '; 
+            messageBox.focus(); // Focus back on the message box
+            suggestedArea.innerHTML = ''; // Clear suggestions
+        };
+        suggestedArea.appendChild(span); // Add the span to the suggestions area
+    });
+}
 
 // --- Fungsi Speech-to-Text ---
 async function sendAudioToServer(audioBlob) {
@@ -161,8 +202,18 @@ async function sendAudioToServer(audioBlob) {
 }
 
 // --- Event Listeners ---
-detectBtn.addEventListener('click', toggleDetection);
-clearBtn.addEventListener('click', () => { messageBox.value = ''; lastPrediction = "-"; sttBox.value = ''; detectedWordDisplay.textContent = ''; });
+detectBtn.addEventListener('click', async () => {
+    if (dictionary.length === 0) { // Load dictionary before starting detection
+        await loadDictionary();
+    }
+    toggleDetection();
+});
+clearBtn.addEventListener('click', () => { 
+    messageBox.value = ''; 
+    lastPrediction = "-"; 
+    sttBox.value = ''; 
+    detectedWordDisplay.textContent = ''; 
+});
 recordBtn.addEventListener('click', async () => {
     if (!isRecording) {
         try {
@@ -188,29 +239,9 @@ recordBtn.addEventListener('click', async () => {
     }
 });
 
-messageBox.addEventListener('input', () => {
-    const words = messageBox.value.trim().split(' ');
-    const last = words[words.length - 1].toLowerCase();
-    if (!last) { suggestedArea.innerHTML = ''; return; }
-    const filtered = dictionary.filter(w => w.startsWith(last) && w !== last);
-    showSuggestions(filtered);
-});
-function showSuggestions(words) {
-    suggestedArea.innerHTML = '';
-    words.forEach(word => {
-        const span = document.createElement('span');
-        span.textContent = word;
-        span.classList.add('suggested-word');
-        span.onclick = () => {
-            let text = messageBox.value;
-            let lastSpace = text.lastIndexOf(' ');
-            if (lastSpace === -1) { messageBox.value = word + ' '; } else { messageBox.value = text.slice(0, lastSpace + 1) + word + ' '; }
-            messageBox.focus();
-            suggestedArea.innerHTML = '';
-        };
-        suggestedArea.appendChild(span);
-    });
-}
-
 // --- Jalankan Aplikasi ---
-setupCamera();
+async function runApp() {
+    await loadDictionary(); // Load dictionary when the app starts
+    await setupCamera(); // Setup camera after loading dictionary
+}
+runApp();
