@@ -267,3 +267,12 @@ footer {
     color: var(--primary-color-dark);
     user-select: none;
 }
+
+button.active-btn {
+    background-color: #d9534f; /* Warna merah saat deteksi/rekaman aktif */
+    box-shadow: 0 4px 8px rgba(217, 83, 79, 0.6);
+}
+
+button.active-btn:hover {
+    background-color: #c9302c; /* Warna merah lebih gelap saat hover */
+}

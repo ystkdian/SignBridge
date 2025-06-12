@@ -1,4 +1,4 @@
-// frontend/script.js (Final dengan semua logika yang diperbaiki)
+// frontend/script.js (Final dengan semua logika dan perbaikan UI)
 
 // --- Deklarasi Elemen DOM ---
 const video = document.getElementById('webcam');
@@ -13,7 +13,7 @@ const modelSelect = document.getElementById('model-select');
 
 // --- Kamus dan State Aplikasi ---
 let dictionary = [];
-let letterBuffer = []; // Buffer untuk mengumpulkan huruf dari deteksi
+let letterBuffer = [];
 let socket = null;
 let isDetecting = false;
 let signDetectionInterval;
@@ -35,13 +35,13 @@ let isRecording = false;
 
 async function loadDictionary() {
     try {
-        const response = await fetch('kamus.json'); // Menggunakan nama file kamus.json
+        const response = await fetch('dictionary.json'); // Menggunakan nama file yang Anda tentukan
         if (!response.ok) throw new Error('Gagal memuat kamus');
         dictionary = await response.json();
-        console.log(`Kamus berhasil dimuat dengan ${dictionary.length} kata.`);
+        console.log(`Kamus berhasil dimuat.`);
     } catch (error) {
         console.error("Error memuat kamus:", error);
-        dictionary = ['HALO', 'APA', 'KABAR', 'SAYA']; // Kamus darurat
+        dictionary = ['HALO', 'APA', 'KABAR'];
     }
 }
 
@@ -79,7 +79,7 @@ function findSuggestions(letters) {
 
 function showSuggestions(words) {
     suggestedArea.innerHTML = '';
-    if (words.length === 0 && letterBuffer.length > 0) {
+    if (words.length === 0 && letterBuffer.length >= 3) {
         suggestedArea.innerHTML = `<span class="suggestion-info">Tidak ada saran untuk "${letterBuffer.join('')}"</span>`;
         return;
     }
@@ -89,7 +89,7 @@ function showSuggestions(words) {
         span.classList.add('suggested-word');
         span.onclick = () => {
             messageBox.value += word.toUpperCase() + " ";
-            letterBuffer = []; // Kosongkan buffer setelah kata dipilih
+            letterBuffer = [];
             suggestedArea.innerHTML = '';
         };
         suggestedArea.appendChild(span);
@@ -110,7 +110,7 @@ function toggleDetection() {
             detectBtn.textContent = 'Hentikan Deteksi';
             detectBtn.classList.add('active-btn');
             modelSelect.disabled = true;
-            signDetectionInterval = setInterval(sendFrameForSignDetection, 1500); // Deteksi per 1.5 detik
+            signDetectionInterval = setInterval(sendFrameForSignDetection, 1500);
         };
 
         socket.onmessage = (event) => {
@@ -120,25 +120,20 @@ function toggleDetection() {
 
             if (data.prediction && data.prediction !== "-" && data.prediction !== lastPrediction) {
                 lastPrediction = data.prediction;
-                
-                // Tambahkan huruf ke buffer, BUKAN ke kotak pesan
                 letterBuffer.push(data.prediction);
                 console.log(`Buffer saat ini: [${letterBuffer.join(", ")}]`);
                 
-                // Tampilkan buffer di kotak pesan utama agar pengguna tahu
+                // Tampilkan isi buffer di kotak pesan agar pengguna tahu
                 messageBox.value = letterBuffer.join("");
 
-                // Jika buffer sudah 3 huruf atau lebih, picu saran
                 if (letterBuffer.length >= 3) {
                     const suggestions = findSuggestions(letterBuffer);
                     showSuggestions(suggestions);
-                } else {
-                    suggestedArea.innerHTML = ''; // Kosongkan saran jika huruf < 3
                 }
             }
         };
 
-        socket.onclose = () => stopDetection();
+        socket.onclose = stopDetection;
         socket.onerror = () => { alert("Gagal terhubung ke server deteksi."); stopDetection(); };
     } else {
         stopDetection();
@@ -182,6 +177,7 @@ async function sendAudioToServer(audioBlob) {
 
 // --- Event Listeners ---
 detectBtn.addEventListener('click', toggleDetection);
+
 clearBtn.addEventListener('click', () => {
     messageBox.value = '';
     sttBox.value = '';
@@ -189,6 +185,7 @@ clearBtn.addEventListener('click', () => {
     letterBuffer = [];
     lastPrediction = "-";
 });
+
 recordBtn.addEventListener('click', async () => {
     if (!isRecording) {
         try {
@@ -214,7 +211,7 @@ recordBtn.addEventListener('click', async () => {
     }
 });
 
-// Listener lama untuk messageBox dihapus karena pemicu sekarang dari deteksi
+// Hapus event listener untuk messageBox.value, karena pemicu sekarang otomatis dari deteksi
 // messageBox.addEventListener('input', ...);
 
 // --- Jalankan Aplikasi ---
