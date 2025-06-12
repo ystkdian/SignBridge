@@ -39,7 +39,7 @@ async function loadDictionary() {
         const response = await fetch('dictionary.json');
         const json = await response.json();
         dictionary = Object.values(json); // Ambil semua nilai dari JSON sebagai dictionary
-        console.log("Dictionary loaded", dictionary); // Untuk debug
+        console.log("Dictionary loaded:", dictionary); // Untuk debug
     } catch (error) {
         console.error("Error loading dictionary:", error);
     }
@@ -121,7 +121,7 @@ function toggleDetection() {
                 }, 3000); // 3000 milidetik = 3 detik
 
                 // --- Tambahan: Menampilkan Saran Kata ---
-                const lastDetectedWord = messageBox.value.trim().split(' ').slice(-1)[0].toLowerCase();
+                const lastDetectedWord = messageBox.value.trim().split(' ').slice(-1)[0].replace(/\s+/g, '').toLowerCase();
                 if (lastDetectedWord.length >= 3) {
                     const suggestions = getSuggestions(lastDetectedWord);
                     showSuggestions(suggestions);
@@ -149,11 +149,9 @@ function stopDetection() {
 
 // --- Fungsi untuk mendapatkan Saran Kata ---
 function getSuggestions(detectedWord) {
-    const filtered = dictionary.filter(word => {
-        const wordLower = word.toLowerCase();
-        return detectedWord.split('').some(letter => wordLower.includes(letter));
+    return dictionary.filter(word => {
+        return word.toLowerCase().includes(detectedWord);
     });
-    return filtered;
 }
 
 // --- Fungsi untuk Menampilkan Saran ---
@@ -239,8 +237,9 @@ recordBtn.addEventListener('click', async () => {
     }
 });
 
+// --- Jalankan Aplikasi ---
 async function runApp() {
-    await loadDictionary(); 
-    await setupCamera(); 
+    await loadDictionary(); // Load dictionary when the app starts
+    await setupCamera(); // Setup camera after loading dictionary
 }
 runApp();
