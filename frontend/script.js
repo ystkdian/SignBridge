@@ -18,7 +18,7 @@ let isDetecting = false;
 let signDetectionInterval;
 
 // !! PENTING: Ganti dengan URL backend Anda saat deploy !!
-const BACKEND_DOMAIN = "https://1673-36-73-70-35.ngrok-free.app"; // Contoh
+const BACKEND_DOMAIN = "1673-36-73-70-35.ngrok-free.app"; // Contoh
 const WEBSOCKET_URL = `wss://${BACKEND_DOMAIN}/ws`;
 const TRANScribe_URL = `https://${BACKEND_DOMAIN}/transcribe`;
 
