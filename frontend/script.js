@@ -72,7 +72,7 @@ function sendFrameForSignDetection() {
 }
 
 function showDetectedWord(word) {
-    detectedWordDisplay.textContent = word;
+    detectedWordDisplay.textContent = word; // Display detected word with spaces.
 }
 
 function toggleDetection() {
@@ -98,21 +98,23 @@ function toggleDetection() {
 
             const data = JSON.parse(event.data);
             if (data.error) { alert(`Error dari server: ${data.error}`); toggleDetection(); return; }
-            
+
+            // Show detected word with spaces
             showDetectedWord(data.prediction);
 
             // Logika utama untuk menambahkan teks dan memulai jeda
             if (data.prediction && data.prediction !== "-") {
-                // Tambahkan teks ke kotak pesan
+                // Menghapus spasi untuk mendapatkan kata yang tepat
+                const processedPrediction = data.prediction.replace(/\s+/g, ''); 
                 if (messageBox.value.slice(-1) !== " " && messageBox.value.length > 0) {
-                    messageBox.value += " " + data.prediction;
+                    messageBox.value += " " + processedPrediction;
                 } else {
-                    messageBox.value += data.prediction;
+                    messageBox.value += processedPrediction;
                 }
 
                 // BARU: Mulai proses jeda 3 detik
                 isCooldown = true;
-                console.log(`Deteksi berhasil: ${data.prediction}. Memulai jeda 3 detik.`);
+                console.log(`Deteksi berhasil: ${processedPrediction}. Memulai jeda 3 detik.`);
                 
                 setTimeout(() => {
                     isCooldown = false; // Matikan mode jeda
@@ -121,7 +123,7 @@ function toggleDetection() {
                 }, 3000); // 3000 milidetik = 3 detik
 
                 // --- Tambahan: Menampilkan Saran Kata ---
-                const lastDetectedWord = messageBox.value.trim().split(' ').slice(-1)[0].replace(/\s+/g, '').toLowerCase();
+                const lastDetectedWord = processedPrediction.toLowerCase(); // Gunakan kata yang telah diproses untuk saran
                 if (lastDetectedWord.length >= 3) {
                     const suggestions = getSuggestions(lastDetectedWord);
                     showSuggestions(suggestions);
