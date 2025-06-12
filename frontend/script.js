@@ -35,10 +35,10 @@ let isRecording = false;
 
 async function loadDictionary() {
     try {
-        const response = await fetch('dictionary.json'); // Menggunakan nama file yang Anda tentukan
+        const response = await fetch('kamus.json');
         if (!response.ok) throw new Error('Gagal memuat kamus');
         dictionary = await response.json();
-        console.log(`Kamus berhasil dimuat.`);
+        console.log(`Kamus berhasil dimuat dengan ${dictionary.length} kata.`);
     } catch (error) {
         console.error("Error memuat kamus:", error);
         dictionary = ['HALO', 'APA', 'KABAR'];
@@ -67,50 +67,55 @@ function showDetectedWord(word) {
     if (detectedWordDisplay) detectedWordDisplay.textContent = word;
 }
 
-function findSuggestions(letters) {
-    const lowerCaseLetters = letters.map(l => l.toLowerCase());
-    const suggestions = dictionary.filter(word => {
-        if (word.length < lowerCaseLetters.length) return false;
-        const lowerCaseWord = word.toLowerCase();
-        return lowerCaseLetters.every(letter => lowerCaseWord.includes(letter));
-    });
+// ===== FUNGSI INI DIPERBAIKI =====
+function findSuggestions(currentWord) {
+    // Hanya proses jika ada kata yang diketik/dideteksi
+    if (!currentWord) return [];
+    const lowerCaseWord = currentWord.toLowerCase();
+    const suggestions = dictionary.filter(dictWord =>
+        dictWord.toLowerCase().startsWith(lowerCaseWord) &&
+        dictWord.length > currentWord.length
+    );
     return suggestions.slice(0, 10);
 }
 
-function showSuggestions(words) {
+function showSuggestions(words, currentWord) {
     suggestedArea.innerHTML = '';
-    if (words.length === 0 && letterBuffer.length >= 3) {
-        suggestedArea.innerHTML = `<span class="suggestion-info">Tidak ada saran untuk "${letterBuffer.join('')}"</span>`;
-        return;
-    }
     words.forEach(word => {
         const span = document.createElement('span');
         span.textContent = word;
         span.classList.add('suggested-word');
         span.onclick = () => {
-            messageBox.value += word.toUpperCase() + " ";
-            letterBuffer = [];
+            let text = messageBox.value.trimEnd();
+            let lastSpaceIndex = text.lastIndexOf(' ');
+            messageBox.value = (lastSpaceIndex === -1 ? "" : text.substring(0, lastSpaceIndex + 1)) + word.toUpperCase() + ' ';
+            messageBox.focus();
             suggestedArea.innerHTML = '';
         };
         suggestedArea.appendChild(span);
     });
 }
 
+function updateSuggestionsFromMessageBox() {
+    const words = messageBox.value.trim().split(' ');
+    const currentWord = words[words.length - 1];
+    const suggestions = findSuggestions(currentWord);
+    showSuggestions(suggestions, currentWord);
+}
+
 function toggleDetection() {
     if (!isDetecting) {
         const selectedModel = modelSelect.value;
         const backendUrlWithMode = `${WEBSOCKET_URL}/${selectedModel}`;
-        console.log(`Menghubungkan ke: ${backendUrlWithMode}`);
         socket = new WebSocket(backendUrlWithMode);
 
         socket.onopen = () => {
             isDetecting = true;
-            letterBuffer = [];
             lastPrediction = "-";
             detectBtn.textContent = 'Hentikan Deteksi';
             detectBtn.classList.add('active-btn');
             modelSelect.disabled = true;
-            signDetectionInterval = setInterval(sendFrameForSignDetection, 1500);
+            signDetectionInterval = setInterval(sendFrameForSignDetection, 1000);
         };
 
         socket.onmessage = (event) => {
@@ -120,16 +125,9 @@ function toggleDetection() {
 
             if (data.prediction && data.prediction !== "-" && data.prediction !== lastPrediction) {
                 lastPrediction = data.prediction;
-                letterBuffer.push(data.prediction);
-                console.log(`Buffer saat ini: [${letterBuffer.join(", ")}]`);
-                
-                // Tampilkan isi buffer di kotak pesan agar pengguna tahu
-                messageBox.value = letterBuffer.join("");
-
-                if (letterBuffer.length >= 3) {
-                    const suggestions = findSuggestions(letterBuffer);
-                    showSuggestions(suggestions);
-                }
+                messageBox.value += data.prediction + " ";
+                // Memicu saran kata secara manual setelah ada deteksi baru
+                updateSuggestionsFromMessageBox();
             }
         };
 
@@ -142,14 +140,12 @@ function toggleDetection() {
 
 function stopDetection() {
     isDetecting = false;
-    letterBuffer = [];
     if (socket) { socket.close(); socket = null; }
     clearInterval(signDetectionInterval);
     detectBtn.textContent = 'Mulai Deteksi';
     detectBtn.classList.remove('active-btn');
     modelSelect.disabled = false;
     showDetectedWord('');
-    suggestedArea.innerHTML = '';
 }
 
 async function sendAudioToServer(audioBlob) {
@@ -177,7 +173,6 @@ async function sendAudioToServer(audioBlob) {
 
 // --- Event Listeners ---
 detectBtn.addEventListener('click', toggleDetection);
-
 clearBtn.addEventListener('click', () => {
     messageBox.value = '';
     sttBox.value = '';
@@ -211,8 +206,37 @@ recordBtn.addEventListener('click', async () => {
     }
 });
 
-// Hapus event listener untuk messageBox.value, karena pemicu sekarang otomatis dari deteksi
-// messageBox.addEventListener('input', ...);
+detectBtn.addEventListener('click', toggleDetection);
+clearBtn.addEventListener('click', () => {
+    messageBox.value = '';
+    sttBox.value = ''; 
+    suggestedArea.innerHTML = '';
+    lastPrediction = "-";
+});
+recordBtn.addEventListener('click', async () => {
+    if (!isRecording) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                sendAudioToServer(audioBlob);
+                stream.getTracks().forEach(track => track.stop());
+            };
+            mediaRecorder.start();
+            isRecording = true;
+            recordBtn.textContent = 'Stop Merekam';
+            recordBtn.classList.add('active-btn');
+        } catch (err) {
+            alert("Tidak bisa mengakses mikrofon.");
+        }
+    } else {
+        mediaRecorder.stop();
+        isRecording = false;
+    }
+});
 
 // --- Jalankan Aplikasi ---
 setupCamera();
