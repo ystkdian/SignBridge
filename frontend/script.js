@@ -28,6 +28,7 @@ let isRecording = false;
 const captureCanvas = document.createElement('canvas');
 const captureCtx = captureCanvas.getContext('2d');
 let lastPrediction = "-";
+let isCooldown = false;
 
 // --- Fungsi Inisialisasi ---
 async function setupCamera() {
@@ -43,6 +44,11 @@ async function setupCamera() {
 
 // --- Fungsi Deteksi Bahasa Isyarat ---
 function sendFrameForSignDetection() {
+    // BARU: Tambahan pengecekan. Jika sedang cooldown, jangan kirim frame.
+    if (isCooldown) {
+        return;
+    }
+
     if (socket && socket.readyState === WebSocket.OPEN && isDetecting) {
         captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
         const frameData = captureCtx.canvas.toDataURL('image/jpeg', 0.8);
@@ -64,6 +70,7 @@ function toggleDetection() {
         socket.onopen = () => {
             console.log("Koneksi deteksi isyarat berhasil.");
             isDetecting = true;
+            isCooldown = false; // Pastikan cooldown mati saat mulai
             detectBtn.textContent = 'Hentikan Deteksi';
             modelSelect.disabled = true;
             detectBtn.style.backgroundColor = '#ff4242';
@@ -71,21 +78,32 @@ function toggleDetection() {
         };
 
         socket.onmessage = (event) => {
+            // Jangan proses pesan baru jika sedang cooldown
+            if (isCooldown) return;
+
             const data = JSON.parse(event.data);
             if (data.error) { alert(`Error dari server: ${data.error}`); toggleDetection(); return; }
+            
             showDetectedWord(data.prediction);
-            if (data.prediction && data.prediction !== "-" && data.prediction !== lastPrediction) {
+
+            // Logika utama untuk menambahkan teks dan memulai jeda
+            if (data.prediction && data.prediction !== "-") {
+                // Tambahkan teks ke kotak pesan
                 if (messageBox.value.slice(-1) !== " " && messageBox.value.length > 0) {
                     messageBox.value += " " + data.prediction;
                 } else {
                     messageBox.value += data.prediction;
                 }
-                lastPrediction = data.prediction;
+
+                // BARU: Mulai proses jeda 3 detik
+                isCooldown = true;
+                console.log(`Deteksi berhasil: ${data.prediction}. Memulai jeda 3 detik.`);
+                
                 setTimeout(() => {
-                    if (lastPrediction !== "-") { messageBox.value += " "; lastPrediction = "-"; }
-                }, 500);
-            } else if (data.prediction === "-") {
-                lastPrediction = "-";
+                    isCooldown = false; // Matikan mode jeda
+                    showDetectedWord("-"); // Hapus prediksi dari layar
+                    console.log("Jeda selesai. Siap mendeteksi lagi.");
+                }, 3000); // 3000 milidetik = 3 detik
             }
         };
 
@@ -98,6 +116,7 @@ function toggleDetection() {
 
 function stopDetection() {
     isDetecting = false;
+    isCooldown = false; // Reset cooldown saat berhenti
     if (socket) { socket.close(); socket = null; }
     clearInterval(signDetectionInterval);
     detectBtn.textContent = 'Mulai Deteksi';
