@@ -1,4 +1,4 @@
-// frontend/script.js (Final - Termasuk Deteksi Isyarat, STT, dan Saran Kata)
+// frontend/script.js (Final - Bersih dan Fungsional)
 
 // --- Deklarasi Elemen DOM ---
 const video = document.getElementById('webcam');
@@ -6,42 +6,44 @@ const messageBox = document.getElementById('message-box');
 const detectBtn = document.getElementById('detect-btn');
 const clearBtn = document.getElementById('clear-btn');
 const suggestedArea = document.getElementById('suggested-area');
-// Deklarasi tombol STT dan TTS
+const detectedWordDisplay = document.getElementById('detected-word-display');
+const modelSelect = document.getElementById('model-select');
 const recordBtn = document.getElementById('record-btn');
 
-
 // --- Kamus dan State Aplikasi ---
-let dictionary = []; // Akan dimuat dari file JSON
-let letterBuffer = []; // Buffer untuk menampung huruf yang terdeteksi
+let dictionary = [];
+let letterBuffer = [];
 let socket = null;
 let isDetecting = false;
 let signDetectionInterval;
 let lastPrediction = "-";
-const captureCanvas = document.createElement('canvas');
-const captureCtx = captureCanvas.getContext('2d');
+let isCooldown = false;
 
-// --- Konfigurasi URL Backend ---
-// Ganti URL ini saat Anda deploy ke Ngrok atau Render
+// --- Konfigurasi URL Backend (Sesuai Permintaan Terakhir Anda) ---
 const BACKEND_DOMAIN = "1673-36-73-70-35.ngrok-free.app";
-const WEBSOCKET_URL = `ws://${BACKEND_DOMAIN}/ws`;
-const TRANSCRIBE_URL = `http://${BACKEND_DOMAIN}/transcribe`;
+const WEBSOCKET_URL = `wss://${BACKEND_DOMAIN}/ws`;
+const TRANSCRIBE_URL = `https://${BACKEND_DOMAIN}/transcribe`;
 
 // Variabel untuk perekaman audio
 let mediaRecorder;
 let audioChunks = [];
 let isRecording = false;
+const captureCanvas = document.createElement('canvas');
+const captureCtx = captureCanvas.getContext('2d');
 
 
 // --- Fungsi untuk Memuat Kamus dari JSON ---
 async function loadDictionary() {
     try {
-        const response = await fetch('dictionary.json'); // Pastikan Anda punya file ini
-        if (!response.ok) throw new Error('Gagal memuat kamus');
+        const response = await fetch('dictionary.json');
+        if (!response.ok) {
+            throw new Error('Gagal memuat kamus: ' + response.statusText);
+        }
         dictionary = await response.json();
         console.log(`Kamus berhasil dimuat dengan ${dictionary.length} kata.`);
     } catch (error) {
         console.error(error);
-        dictionary = ['halo', 'apa', 'kabar'];
+        dictionary = ['halo', 'apa', 'kabar', 'maaf', 'error'];
     }
 }
 
@@ -60,19 +62,22 @@ async function setupCamera() {
 // --- Fungsi Logika Inti Aplikasi ---
 
 function sendFrameForSignDetection() {
-    if (!isDetecting || !socket || socket.readyState !== WebSocket.OPEN) return;
+    if (isCooldown || !isDetecting || !socket || socket.readyState !== WebSocket.OPEN) return;
     captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
     const frameData = captureCanvas.toDataURL('image/jpeg', 0.8);
     socket.send(frameData);
 }
 
-function findSuggestions(letterSequence) {
-    const letters = letterSequence.toLowerCase().split('');
-    if (letters.length === 0) return [];
+function showDetectedWord(word) {
+    if (detectedWordDisplay) detectedWordDisplay.textContent = word;
+}
+
+function findSuggestions(letters) {
+    const lowerCaseLetters = letters.map(l => l.toLowerCase());
     const suggestions = dictionary.filter(word => {
-        if (word.length < letters.length) return false;
+        if (word.length < lowerCaseLetters.length || word.length > 15) return false;
         const lowerCaseWord = word.toLowerCase();
-        return letters.every(letter => lowerCaseWord.includes(letter));
+        return lowerCaseLetters.every(letter => lowerCaseWord.includes(letter));
     });
     return suggestions.slice(0, 10);
 }
@@ -107,52 +112,64 @@ function showSuggestions(words, currentLetters) {
 
 function toggleDetection() {
     if (!isDetecting) {
-        const selectedModel = document.getElementById('model-select') ? document.getElementById('model-select').value : 'sibi';
+        const selectedModel = modelSelect ? modelSelect.value : 'sibi';
         const backendUrlWithMode = `${WEBSOCKET_URL}/${selectedModel}`;
+        console.log(`Menghubungkan ke: ${backendUrlWithMode}`);
         socket = new WebSocket(backendUrlWithMode);
 
         socket.onopen = () => {
-            isDetecting = true; letterBuffer = []; lastPrediction = "-";
+            isDetecting = true;
+            isCooldown = false;
+            letterBuffer = [];
+            lastPrediction = "-";
+            if (modelSelect) modelSelect.disabled = true;
             detectBtn.textContent = 'Hentikan Deteksi';
+            detectBtn.style.backgroundColor = '#2a96e8'; // Warna biru gelap
             signDetectionInterval = setInterval(sendFrameForSignDetection, 1500);
         };
 
         socket.onmessage = (event) => {
+            if (isCooldown) return;
             const data = JSON.parse(event.data);
             if (data.error) { alert(`Error dari server: ${data.error}`); toggleDetection(); return; }
-            if (document.getElementById('detected-word-display')) document.getElementById('detected-word-display').textContent = data.prediction;
-
+            showDetectedWord(data.prediction);
             if (data.prediction && data.prediction !== "-" && data.prediction !== lastPrediction) {
                 lastPrediction = data.prediction;
                 letterBuffer.push(data.prediction);
                 console.log(`Buffer huruf: [${letterBuffer.join(', ')}]`);
-
                 if (letterBuffer.length >= 3) {
                     const suggestions = findSuggestions(letterBuffer);
                     showSuggestions(suggestions, letterBuffer.join(''));
                 }
+                isCooldown = true;
+                setTimeout(() => {
+                    isCooldown = false;
+                    showDetectedWord("-");
+                }, 3000);
             }
         };
 
-        socket.onclose = () => stopDetection();
-        socket.onerror = () => { alert("Gagal terhubung ke server deteksi."); stopDetection(); };
+        socket.onclose = () => { console.log("Koneksi deteksi isyarat ditutup."); stopDetection(); };
+        socket.onerror = (error) => { console.error("WebSocket error:", error); alert("Gagal terhubung ke server deteksi."); stopDetection(); };
     } else {
         stopDetection();
     }
 }
 
 function stopDetection() {
-    isDetecting = false; letterBuffer = [];
+    isDetecting = false;
+    isCooldown = false;
+    letterBuffer = [];
     if (socket) { socket.close(); socket = null; }
     clearInterval(signDetectionInterval);
     detectBtn.textContent = 'Mulai Deteksi';
-    if(document.getElementById('model-select')) document.getElementById('model-select').disabled = false;
-    if(document.getElementById('detected-word-display')) document.getElementById('detected-word-display').textContent = '';
+    if(modelSelect) modelSelect.disabled = false;
+    detectBtn.style.backgroundColor = 'var(--primary-color)';
+    showDetectedWord('');
     suggestedArea.innerHTML = '';
     suggestedArea.setAttribute('aria-label', 'Saran kata muncul di sini...');
 }
 
-// --- FUNGSI TRANSKRIPSI AUDIO (YANG SEBELUMNYA HILANG) ---
 async function sendAudioToServer(audioBlob) {
     const formData = new FormData();
     formData.append("audio_file", audioBlob, "recording.wav");
@@ -181,7 +198,6 @@ async function sendAudioToServer(audioBlob) {
 
 // --- Event Listeners ---
 detectBtn.addEventListener('click', toggleDetection);
-
 clearBtn.addEventListener('click', () => {
     messageBox.value = '';
     letterBuffer = [];
@@ -190,7 +206,6 @@ clearBtn.addEventListener('click', () => {
     lastPrediction = "-";
 });
 
-// Event Listener untuk Tombol Rekam Suara
 recordBtn.addEventListener('click', async () => {
     if (!isRecording) {
         try {
@@ -215,9 +230,6 @@ recordBtn.addEventListener('click', async () => {
         isRecording = false;
     }
 });
-
-// Event Listener untuk tombol Ucapkan Pesan (jika ada di HTML)
-
 
 // --- Jalankan Aplikasi ---
 setupCamera();
