@@ -1,5 +1,3 @@
-# backend/main.py (Menggunakan whisper-small untuk akurasi lebih tinggi)
-
 import os
 import cv2
 import numpy as np
