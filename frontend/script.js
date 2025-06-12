@@ -3,7 +3,6 @@
 const video = document.getElementById('webcam');
 const messageBox = document.getElementById('message-box');
 const detectBtn = document.getElementById('detect-btn');
-const speakBtn = document.getElementById('speak-btn');
 const clearBtn = document.getElementById('clear-btn');
 const suggestedArea = document.getElementById('suggested-area');
 const detectedWordDisplay = document.getElementById('detected-word-display');
@@ -138,14 +137,6 @@ async function sendAudioToServer(audioBlob) {
 // --- Event Listeners ---
 detectBtn.addEventListener('click', toggleDetection);
 clearBtn.addEventListener('click', () => { messageBox.value = ''; lastPrediction = "-"; });
-speakBtn.addEventListener('click', () => {
-    const text = messageBox.value.trim();
-    if (!text) { alert('Tidak ada pesan untuk diucapkan'); return; }
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'id-ID';
-    if(speechSynthesis.speaking) speechSynthesis.cancel();
-    speechSynthesis.speak(utterance);
-});
 
 recordBtn.addEventListener('click', async () => {
     if (!isRecording) {
