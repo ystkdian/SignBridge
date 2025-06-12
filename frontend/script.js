@@ -118,7 +118,7 @@ function toggleDetection() {
                     isCooldown = false; // Matikan mode jeda
                     showDetectedWord("-"); // Hapus prediksi dari layar
                     console.log("Jeda selesai. Siap mendeteksi lagi.");
-                }, 2000); // 3000 milidetik = 3 detik
+                }, 3000); // 3000 milidetik = 3 detik
 
                 // --- Tambahan: Menampilkan Saran Kata ---
                 const lastDetectedWord = messageBox.value.trim().split(' ').slice(-1)[0].toLowerCase();
