@@ -239,7 +239,6 @@ recordBtn.addEventListener('click', async () => {
     }
 });
 
-// --- Jalankan Aplikasi ---
 async function runApp() {
     await loadDictionary(); // Load dictionary when the app starts
     await setupCamera(); // Setup camera after loading dictionary
