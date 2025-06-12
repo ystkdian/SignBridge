@@ -20,7 +20,7 @@ const captureCanvas = document.createElement('canvas');
 const captureCtx = captureCanvas.getContext('2d');
 
 // --- Konfigurasi URL Backend ---
-const BACKEND_DOMAIN = "1673-36-73-70-35.ngrok-free.app "; // Ganti saat deploy
+const BACKEND_DOMAIN = "1673-36-73-70-35.ngrok-free.app"; // Ganti saat deploy
 const WEBSOCKET_URL = `wss://${BACKEND_DOMAIN}/ws`;
 const TRANSCRIBE_URL = `https://${BACKEND_DOMAIN}/transcribe`;
 
@@ -32,7 +32,7 @@ let isRecording = false;
 // --- Fungsi-fungsi ---
 async function loadDictionary() {
     try {
-        const response = await fetch('kamus.json');
+        const response = await fetch('dictionary.json');
         if (!response.ok) throw new Error('Gagal memuat kamus');
         dictionary = await response.json();
     } catch (error) {
