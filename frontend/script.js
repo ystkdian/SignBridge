@@ -1,4 +1,4 @@
-// frontend/script.js (Final - Bersih dan Fungsional)
+// frontend/script.js (Final Lengkap)
 
 // --- Deklarasi Elemen DOM ---
 const video = document.getElementById('webcam');
@@ -6,48 +6,43 @@ const messageBox = document.getElementById('message-box');
 const detectBtn = document.getElementById('detect-btn');
 const clearBtn = document.getElementById('clear-btn');
 const suggestedArea = document.getElementById('suggested-area');
-const detectedWordDisplay = document.getElementById('detected-word-display');
 const modelSelect = document.getElementById('model-select');
 const recordBtn = document.getElementById('record-btn');
 
 // --- Kamus dan State Aplikasi ---
 let dictionary = [];
-let letterBuffer = [];
 let socket = null;
 let isDetecting = false;
 let signDetectionInterval;
 let lastPrediction = "-";
-let isCooldown = false;
+const captureCanvas = document.createElement('canvas');
+const captureCtx = captureCanvas.getContext('2d');
 
-// --- Konfigurasi URL Backend (Sesuai Permintaan Terakhir Anda) ---
-const BACKEND_DOMAIN = "1673-36-73-70-35.ngrok-free.app";
-const WEBSOCKET_URL = `wss://${BACKEND_DOMAIN}/ws`;
-const TRANSCRIBE_URL = `https://${BACKEND_DOMAIN}/transcribe`;
+// --- Konfigurasi URL Backend ---
+const BACKEND_DOMAIN = "1673-36-73-70-35.ngrok-free.app"; // Ganti saat deploy
+const WEBSOCKET_URL = `ws://${BACKEND_DOMAIN}/ws`;
+const TRANSCRIBE_URL = `http://${BACKEND_DOMAIN}/transcribe`;
 
 // Variabel untuk perekaman audio
 let mediaRecorder;
 let audioChunks = [];
 let isRecording = false;
-const captureCanvas = document.createElement('canvas');
-const captureCtx = captureCanvas.getContext('2d');
 
+// --- Fungsi-fungsi ---
 
-// --- Fungsi untuk Memuat Kamus dari JSON ---
+// Memuat kamus dari file JSON eksternal
 async function loadDictionary() {
     try {
-        const response = await fetch('dictionary.json');
-        if (!response.ok) {
-            throw new Error('Gagal memuat kamus: ' + response.statusText);
-        }
+        const response = await fetch('dictionary.json'); // Pastikan Anda memiliki file ini
+        if (!response.ok) throw new Error('Gagal memuat kamus');
         dictionary = await response.json();
-        console.log(`Kamus berhasil dimuat dengan ${dictionary.length} kata.`);
     } catch (error) {
-        console.error(error);
-        dictionary = ['halo', 'apa', 'kabar', 'maaf', 'error'];
+        console.error("Error memuat kamus:", error);
+        dictionary = ['HALO', 'APA', 'KABAR', 'SAYA', 'KAMU'];
     }
 }
 
-// --- Fungsi Inisialisasi Kamera ---
+// Menyiapkan kamera
 async function setupCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -59,98 +54,77 @@ async function setupCamera() {
     } catch (err) { alert('Akses webcam error: ' + err.message); }
 }
 
-// --- Fungsi Logika Inti Aplikasi ---
-
+// Mengirim frame video ke backend
 function sendFrameForSignDetection() {
-    if (isCooldown || !isDetecting || !socket || socket.readyState !== WebSocket.OPEN) return;
+    if (!isDetecting || !socket || socket.readyState !== WebSocket.OPEN) return;
     captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
     const frameData = captureCanvas.toDataURL('image/jpeg', 0.8);
     socket.send(frameData);
 }
 
-function showDetectedWord(word) {
-    if (detectedWordDisplay) detectedWordDisplay.textContent = word;
+// Mencari saran kata berdasarkan kata terakhir di kotak pesan
+function findSuggestions(currentWord) {
+    if (!currentWord || currentWord.length < 1) return [];
+    const lowerCaseWord = currentWord.toLowerCase();
+    return dictionary.filter(dictWord => 
+        dictWord.toLowerCase().startsWith(lowerCaseWord) && 
+        dictWord.length > 1 && 
+        dictWord.toLowerCase() !== lowerCaseWord
+    ).slice(0, 10);
 }
 
-function findSuggestions(letters) {
-    const lowerCaseLetters = letters.map(l => l.toLowerCase());
-    const suggestions = dictionary.filter(word => {
-        if (word.length < lowerCaseLetters.length || word.length > 15) return false;
-        const lowerCaseWord = word.toLowerCase();
-        return lowerCaseLetters.every(letter => lowerCaseWord.includes(letter));
-    });
-    return suggestions.slice(0, 10);
-}
-
-function showSuggestions(words, currentLetters) {
+// Menampilkan saran kata di UI
+function showSuggestions(words, currentWord) {
     suggestedArea.innerHTML = '';
-    if (words.length === 0) {
-        suggestedArea.setAttribute('aria-label', `Tidak ada saran untuk "${currentLetters}"`);
-        return;
-    }
-    suggestedArea.removeAttribute('aria-label');
     words.forEach(word => {
         const span = document.createElement('span');
         span.textContent = word;
         span.classList.add('suggested-word');
         span.onclick = () => {
-            let text = messageBox.value;
-            let lastWordIndex = text.toUpperCase().lastIndexOf(currentLetters.toUpperCase());
-            if (lastWordIndex !== -1) {
-                messageBox.value = text.substring(0, lastWordIndex) + word.toUpperCase() + " ";
+            let text = messageBox.value.trimEnd();
+            let lastSpaceIndex = text.lastIndexOf(' ');
+            if (lastSpaceIndex === -1) {
+                messageBox.value = word + ' ';
             } else {
-                messageBox.value += word.toUpperCase() + " ";
+                messageBox.value = text.substring(0, lastSpaceIndex + 1) + word + ' ';
             }
             messageBox.focus();
-            letterBuffer = [];
             suggestedArea.innerHTML = '';
-            suggestedArea.setAttribute('aria-label', 'Saran kata muncul di sini...');
         };
         suggestedArea.appendChild(span);
     });
 }
 
+// Fungsi utama untuk memulai/menghentikan deteksi isyarat
 function toggleDetection() {
     if (!isDetecting) {
-        const selectedModel = modelSelect ? modelSelect.value : 'sibi';
+        const selectedModel = modelSelect.value;
         const backendUrlWithMode = `${WEBSOCKET_URL}/${selectedModel}`;
-        console.log(`Menghubungkan ke: ${backendUrlWithMode}`);
         socket = new WebSocket(backendUrlWithMode);
 
         socket.onopen = () => {
             isDetecting = true;
-            isCooldown = false;
-            letterBuffer = [];
             lastPrediction = "-";
-            if (modelSelect) modelSelect.disabled = true;
             detectBtn.textContent = 'Hentikan Deteksi';
-            detectBtn.style.backgroundColor = '#2a96e8'; // Warna biru gelap
-            signDetectionInterval = setInterval(sendFrameForSignDetection, 1500);
+            detectBtn.classList.add('active-btn');
+            modelSelect.disabled = true;
+            signDetectionInterval = setInterval(sendFrameForSignDetection, 1000);
         };
 
         socket.onmessage = (event) => {
-            if (isCooldown) return;
             const data = JSON.parse(event.data);
-            if (data.error) { alert(`Error dari server: ${data.error}`); toggleDetection(); return; }
-            showDetectedWord(data.prediction);
+            if (data.error) { alert(`Error: ${data.error}`); stopDetection(); return; }
+
             if (data.prediction && data.prediction !== "-" && data.prediction !== lastPrediction) {
                 lastPrediction = data.prediction;
-                letterBuffer.push(data.prediction);
-                console.log(`Buffer huruf: [${letterBuffer.join(', ')}]`);
-                if (letterBuffer.length >= 3) {
-                    const suggestions = findSuggestions(letterBuffer);
-                    showSuggestions(suggestions, letterBuffer.join(''));
-                }
-                isCooldown = true;
-                setTimeout(() => {
-                    isCooldown = false;
-                    showDetectedWord("-");
-                }, 3000);
+                messageBox.value += data.prediction + " ";
+                // Memicu event 'input' agar saran kata muncul
+                messageBox.dispatchEvent(new Event('input'));
             }
         };
 
-        socket.onclose = () => { console.log("Koneksi deteksi isyarat ditutup."); stopDetection(); };
-        socket.onerror = (error) => { console.error("WebSocket error:", error); alert("Gagal terhubung ke server deteksi."); stopDetection(); };
+        socket.onclose = () => stopDetection();
+        socket.onerror = () => { alert("Gagal terhubung ke server deteksi."); stopDetection(); };
     } else {
         stopDetection();
     }
@@ -158,23 +132,20 @@ function toggleDetection() {
 
 function stopDetection() {
     isDetecting = false;
-    isCooldown = false;
-    letterBuffer = [];
     if (socket) { socket.close(); socket = null; }
     clearInterval(signDetectionInterval);
     detectBtn.textContent = 'Mulai Deteksi';
-    if(modelSelect) modelSelect.disabled = false;
-    detectBtn.style.backgroundColor = 'var(--primary-color)';
-    showDetectedWord('');
-    suggestedArea.innerHTML = '';
-    suggestedArea.setAttribute('aria-label', 'Saran kata muncul di sini...');
+    detectBtn.classList.remove('active-btn');
+    modelSelect.disabled = false;
 }
 
+// Fungsi untuk transkripsi suara
 async function sendAudioToServer(audioBlob) {
     const formData = new FormData();
     formData.append("audio_file", audioBlob, "recording.wav");
     recordBtn.textContent = 'Memproses...';
     recordBtn.disabled = true;
+    recordBtn.classList.add('active-btn');
     try {
         const response = await fetch(TRANSCRIBE_URL, { method: 'POST', body: formData });
         if (response.ok) {
@@ -185,24 +156,23 @@ async function sendAudioToServer(audioBlob) {
                 alert(`Error transkripsi: ${result.error}`);
             }
         } else {
-            alert("Gagal mengirim audio ke server. Status: " + response.status);
+            alert("Gagal mengirim audio. Status: " + response.status);
         }
     } catch (error) {
-        console.error("Error saat mengirim audio:", error);
         alert("Terjadi kesalahan koneksi saat mengirim audio.");
     } finally {
-        recordBtn.innerHTML = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.49 6-3.31 6-6.72h-1.7z"/></svg> Rekam Suara`;
+        recordBtn.textContent = 'Rekam Suara';
         recordBtn.disabled = false;
+        recordBtn.classList.remove('active-btn');
     }
 }
 
 // --- Event Listeners ---
 detectBtn.addEventListener('click', toggleDetection);
+
 clearBtn.addEventListener('click', () => {
     messageBox.value = '';
-    letterBuffer = [];
     suggestedArea.innerHTML = '';
-    suggestedArea.setAttribute('aria-label', 'Saran kata muncul di sini...');
     lastPrediction = "-";
 });
 
@@ -211,24 +181,33 @@ recordBtn.addEventListener('click', async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
             mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
             mediaRecorder.onstop = () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                 sendAudioToServer(audioBlob);
-                audioChunks = [];
                 stream.getTracks().forEach(track => track.stop());
             };
             mediaRecorder.start();
             isRecording = true;
             recordBtn.textContent = 'Stop Merekam';
-            recordBtn.style.backgroundColor = '#ff4242';
+            recordBtn.classList.add('active-btn');
         } catch (err) {
-            alert("Tidak bisa mengakses mikrofon. Pastikan Anda memberikan izin.");
+            alert("Tidak bisa mengakses mikrofon.");
         }
     } else {
         mediaRecorder.stop();
         isRecording = false;
+        // Tampilan tombol akan dikembalikan di dalam 'sendAudioToServer'
     }
+});
+
+// Listener untuk saran kata berdasarkan isi kotak pesan
+messageBox.addEventListener('input', () => {
+    const words = messageBox.value.trim().split(' ');
+    const currentWord = words[words.length - 1];
+    const suggestions = findSuggestions(currentWord);
+    showSuggestions(suggestions, currentWord);
 });
 
 // --- Jalankan Aplikasi ---

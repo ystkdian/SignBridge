@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SignBridge - SIBI & BISINDO Detection to Text</title>
+    <title>SignBridge - Deteksi Bahasa Isyarat & STT</title>
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -12,36 +12,36 @@
     </header>
     <main>
         <div class="video-form-container">
-            <div id="video-container" style="position: relative;">
+            <div id="video-container">
                 <video id="webcam" autoplay muted playsinline></video>
-                <div id="detected-word-display" style="position: absolute; bottom: 20px; width: 100%; text-align: center; color: white; font-size: 2.5rem; font-weight: bold; text-shadow: 2px 2px 8px rgba(0,0,0,0.8);"></div>
             </div>
+
             <div id="field-container">
                 <div>
                     <label for="model-select">Mode Deteksi:</label>
-                    <select id="model-select" style="width: 100%; padding: 0.8rem; border-radius: var(--border-radius); border: 2px solid var(--primary-color-light); font-size: 1rem;">
-                        <option value="sibi">SIBI (1 Tangan)</option>
-                        <option value="bisindo">BISINDO (2 Tangan)</option>
+                    <select id="model-select">
+                        <option value="sibi">SIBI</option>
+                        <option value="bisindo">BISINDO</option>
                     </select>
                 </div>
                 <div>
                     <label for="message-box">Pesan:</label>
-                    <textarea id="message-box" rows="3" placeholder="Pesan terdeteksi akan muncul di sini..."></textarea>
+                    <textarea id="message-box" rows="4" placeholder="Hasil deteksi isyarat atau suara akan muncul di sini..."></textarea>
                 </div>
                 <div>
-                    <label for="suggested-area">Saran Kata</label>
-                    <div id="suggested-area" class="suggested-area" aria-label="Saran kata muncul di sini..."></div>
+                    <label for="suggested-area">Saran Kata:</label>
+                    <div id="suggested-area" class="suggested-area" aria-label="Saran kata akan muncul di sini..."></div>
                 </div>        
                 <div class="button-group">
-                    <button id="detect-btn" title="Mulai mendeteksi">
+                    <button id="detect-btn" title="Mulai mendeteksi isyarat">
                         <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M17 10.5V7c0-1.1-.9-2-2-2H3C1.9 5 1 5.9 1 7v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-3.5l4 4v-11l-4 4z"/></svg>
                         Mulai Deteksi
                     </button>
                     <button id="record-btn" title="Rekam suara untuk diubah jadi teks">
                         <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.49 6-3.31 6-6.72h-1.7z"/></svg>
-                        Ucapkan Pesan
+                        Rekam Suara
                     </button>
-                    <button class="button-outline" id="clear-btn" title="Menghapus Pesan">
+                    <button class="button-outline" id="clear-btn" title="Hapus Pesan">
                         <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18.3 5.71L12 12.01 5.7 5.71 4.29 7.12 10.59 13.41 4.29 19.71 5.7 21.12 12 14.83 18.3 21.12 19.71 19.71 13.41 13.41 19.71 7.12z"/></svg>
                         Hapus Pesan
                     </button>
@@ -49,21 +49,6 @@
             </div>
         </div>
     </main>
-
-    <div class="section-title">Kenali Bahasa Isyarat Indonesia</div>
-    <div class="info-section">
-      <div class="info-card">
-        <img src="SIBI.webp" alt="Ilustrasi SIBI" style="width:100%; border-radius:8px;" />
-        <h3>SIBI (Sistem Isyarat Bahasa Indonesia)</h3>
-        <p>SIBI adalah sistem isyarat yang dibakukan dan diakui secara formal untuk digunakan dalam pendidikan bagi penyandang disabilitas rungu di Indonesia. SIBI memiliki struktur yang cenderung mengikuti tata bahasa Indonesia lisan dan seringkali menggunakan representasi abjad jari untuk kata-kata yang belum memiliki isyarat baku.</p>
-      </div>
-      <div class="info-card">
-        <img src="BISINDO.webp" alt="Ilustrasi BISINDO" style="width:100%; border-radius:8px;" />
-        <h3>BISINDO (Bahasa Isyarat Indonesia)</h3>
-        <p>BISINDO adalah bahasa isyarat alami yang tumbuh dan berkembang di kalangan komunitas Tuli Indonesia. BISINDO memiliki tata bahasa visualnya sendiri yang unik dan kaya akan ekspresi. Terdapat variasi regional dalam BISINDO, mencerminkan keragaman budaya Tuli di berbagai daerah Indonesia.</p>
-      </div>
-    </div>
-  
     <footer>© LAI25-RM113 LaskarAI - SignBridge</footer>
     <script src="script.js"></script>
 </body>
