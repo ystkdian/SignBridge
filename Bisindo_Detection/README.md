@@ -31,16 +31,17 @@ Proyek ini akan membuat struktur direktori berikut di dalam Google Drive Anda. I
 /content/drive/MyDrive/Capstone/
 
 ├── dataset_isyarat/
-
+|   |
 │   ├── raw_data/
-
+|   |
 │   └── alfabet-bisindo.zip
-
+|
 ├── processed_hybrid_data/
-
+|   |
 │   ├── ... (file .npy dan .txt)
-
+|
 └── models_hybrid/
+    |
     └── ... (file .keras dan .h5)
 
 
