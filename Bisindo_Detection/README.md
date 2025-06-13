@@ -9,7 +9,6 @@ Dokumentasi ini memberikan panduan lengkap untuk proyek pengenalan alfabet Bahas
 * [Struktur Proyek](#bookmark=id.pk0vm25g6yct)  
 * [Langkah-Langkah Eksekusi dan Penjelasan Program](#bookmark=id.9p7oa74f1l4q)  
 * [Hasil](#bookmark=id.pw0pqt1wcocs)  
-* [Konversi ke TensorFlow.js](#bookmark=id.utc3ahg3dvor)
 
 ## **Prasyarat**
 
