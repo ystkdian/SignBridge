@@ -29,11 +29,17 @@ Langkah pertama adalah menginstal semua pustaka Python yang dibutuhkan. Perintah
 Proyek ini akan membuat struktur direktori berikut di dalam Google Drive Anda. Ini membantu dalam mengelola file dataset, data yang telah diproses, dan model yang disimpan secara terorganisir.
 
 /content/drive/MyDrive/Capstone/
+
 ├── dataset_isyarat/
+
 │   ├── raw_data/
+
 │   └── alfabet-bisindo.zip
+
 ├── processed_hybrid_data/
+
 │   ├── ... (file .npy dan .txt)
+
 └── models_hybrid/
     └── ... (file .keras dan .h5)
 
