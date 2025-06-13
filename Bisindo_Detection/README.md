@@ -1,6 +1,6 @@
-# **Proyek Pengenalan Bahasa Isyarat SIBI Menggunakan Model Hybrid**
+# **Proyek Pengenalan Alfabet BISINDO Menggunakan Model Hybrid**
 
-Dokumentasi ini memberikan panduan lengkap untuk proyek pengenalan abjad Bahasa Isyarat Indonesia (SIBI) menggunakan model *deep learning*. Proyek ini memanfaatkan model hybrid yang menggabungkan arsitektur **MobileNetV2** untuk analisis fitur gambar dan **MediaPipe** untuk ekstraksi *landmark* tangan, sehingga menghasilkan sistem pengenalan yang akurat dan efisien.
+Dokumentasi ini memberikan panduan lengkap untuk proyek pengenalan alfabet Bahasa Isyarat Indonesia (BISINDO) menggunakan model **deep learning**. Proyek ini memanfaatkan model hybrid yang menggabungkan arsitektur **MobileNetV2** untuk analisis fitur gambar dan MediaPipe untuk ekstraksi landmark tangan, sehingga menghasilkan sistem pengenalan yang akurat dan efisien.
 
 ## **Daftar Isi**
 
@@ -29,13 +29,13 @@ Langkah pertama adalah menginstal semua pustaka Python yang dibutuhkan. Perintah
 
 Proyek ini akan membuat struktur direktori berikut di dalam Google Drive Anda. Ini membantu dalam mengelola file dataset, data yang telah diproses, dan model yang disimpan secara terorganisir.
 
-/content/drive/MyDrive/Capstone/Sibi/  
-├── dataset\_isyarat/  
-│   ├── raw\_data/  
-│   └── combined-sibi-dataset.zip  
-├── processed\_hybrid\_data/  
-│   ├── ... (file .npy dan .txt)  
-└── models\_hybrid/  
+/content/drive/MyDrive/Capstone/
+├── dataset_isyarat/
+│   ├── raw_data/
+│   └── alfabet-bisindo.zip
+├── processed_hybrid_data/
+│   ├── ... (file .npy dan .txt)
+└── models_hybrid/
     └── ... (file .keras dan .h5)
 
 ## **Langkah-Langkah Eksekusi dan Penjelasan Program**
@@ -51,7 +51,8 @@ Penjelasan Program: Sel ini mengimpor semua modul dan pustaka yang akan digunaka
 
 Tujuan: Mendefinisikan lokasi penyimpanan file.  
 Penjelasan Program: Kode ini mendefinisikan variabel-variabel yang berisi path ke direktori-direktori penting dan membuatnya jika belum ada.  
-![Screenshot 2025-06-13 135801](https://github.com/user-attachments/assets/096019cd-3459-4ee6-be71-e475cac39edb)
+
+![Screenshot 2025-06-13 142947](https://github.com/user-attachments/assets/84c98851-ee26-4b9c-9678-e35cd6b2916d)
 
 ### **3\. Unduh dan Ekstrak Dataset**
 
@@ -60,8 +61,7 @@ Penjelasan Program:
 
 * **Kredensial Kaggle**: Anda akan diminta mengunggah file kaggle.json dari akun Kaggle Anda.  
 * **Unduh & Ekstrak**: Program akan menggunakan API Kaggle untuk mengunduh dan mengekstrak dataset ke RAW\_DATA\_PATH.
-![Screenshot 2025-06-13 135845](https://github.com/user-attachments/assets/2347be29-eef9-49b2-9766-812965889394)
-
+![Screenshot 2025-06-13 143018](https://github.com/user-attachments/assets/4ced47e5-182d-4947-9f5d-f019d18c261f)
 
 ### **4\. Pra-pemrosesan dan Ekstraksi Fitur**
 
@@ -111,8 +111,8 @@ Penjelasan Program: Menyimpan model yang telah dilatih dan menyediakan fungsi in
 
 Model yang telah dilatih menunjukkan performa yang sangat baik dan berhasil mencapai:
 
-* **Akurasi Validasi Tertinggi**: **98.77%**  
-* **Akurasi pada Data Pengujian**: **98.77%**
+* **Akurasi Validasi Tertinggi**: **90.70%**  
+* **Akurasi pada Data Pengujian**: **90.70%**
 
 Hasil ini menunjukkan bahwa arsitektur hybrid mampu mempelajari fitur visual dan spasial dari bahasa isyarat secara efektif, dengan kemampuan generalisasi yang kuat pada data baru.
 
