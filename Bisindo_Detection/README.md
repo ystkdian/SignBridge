@@ -37,6 +37,7 @@ Proyek ini akan membuat struktur direktori berikut di dalam Google Drive Anda. I
 └── models_hybrid/
     └── ... (file .keras dan .h5)
 
+
 ## **Langkah-Langkah Eksekusi dan Penjelasan Program**
 
 ### **1\. Pengaturan Awal dan Impor Pustaka**
